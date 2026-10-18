@@ -3,101 +3,202 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>高技能人才月报填报系统</title>
+<title>技能人才月报填报系统</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;font-family:"Microsoft Yahei",sans-serif}
-body{padding:20px;background:#f4f7fa}
-.container{max-width:1400px;margin:0 auto;background:#fff;border-radius:12px;padding:24px;box-shadow:0 2px 12px #00000010}
-.login-wrap{max-width:420px;margin:80px auto;background:#fff;padding:30px;border-radius:10px;box-shadow:0 2px 14px #0002}
-.login-wrap h2{text-align:center;margin-bottom:24px;color:#222}
-.form-item{margin-bottom:16px}
-.form-item label{display:block;margin-bottom:6px;color:#444}
-.form-item input{width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:6px;font-size:16px}
-button{padding:10px 18px;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:16px}
-table{width:100%;border-collapse:collapse;margin-top:16px}
-th,td{border:1px solid #ddd;padding:10px;text-align:center}
-th{background:#f1f5f9}
-input.table-input{width:100%;border:0;padding:4px 6px}
+body{padding:20px;background:#f4f7fa;font-size:13px;}
+.container{max-width:100%;overflow:auto;background:#fff;border-radius:8px;padding:16px;box-shadow:0 2px 10px #00000015}
+.login-box{width:400px;margin:60px auto;background:#fff;padding:24px;border-radius:8px;box-shadow:0 2px 12px #0002}
+.login-box h2{text-align:center;margin-bottom:20px;color:#222}
+.form-item{margin-bottom:14px}
+.form-item label{display:block;margin-bottom:4px;color:#333}
+.form-item input{width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:4px;font-size:14px}
+button{padding:9px 16px;background:#2563eb;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:14px}
+table{border-collapse:collapse;width:max-content;min-width:1400px;margin-top:12px;}
+th,td{border:1px solid #aaa;padding:6px 4px;text-align:center;vertical-align:middle;}
+th{background:#f1f5f9;font-weight:normal;white-space:nowrap;}
+input.cell{width:100%;border:0;padding:4px 2px;text-align:center;background:transparent;outline:none}
+input:read-only{background:#e9ecef;cursor:not-allowed;}
+.big-header{background:#d9e8fb;font-weight:bold}
+.green-header{background:#c9e2ff;font-weight:bold}
 </style>
 </head>
 <body>
 <div id="app"></div>
-
 <script>
-// ========= 模拟数据版本，不访问数据库，前端页面调试 =========
+// ===================== 替换成你的Supabase项目信息 =====================
+const SUPABASE_URL = "https://nfdywdhegjghwimuedkr.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5mZHl3ZGhlZ2pnaHdpbXVlZGtyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIyNjc5NzYsImV4cCI6MjEwNzg0Mzk3Nn0.yRyypCTlxvLHo3VZ0sJYwe-KFzC6HrAkBRTiJmLTO98";
+// =================================================================
+
 const userList = [
   {user:"admin",pwd:"yb2026",role:"admin",name:"管理员"},
-  {user:"市本级",pwd:"yb2026",role:"city",name:"市本级管理员"},
-  {user:"小店区",pwd:"yb2026",role:"county",name:"小店区填报员"},
+  {user:"市本级",pwd:"yb2026",role:"city",name:"市本级填报员"},
+  {user:"小店区",pwd:"yb2026",role:"county",name:"县区填报员"},
 ];
 
-// 模拟测试数据
-const mockData = [
-  {id:1, area:"太原市", b:"100", c:"20", d:"30", e:"40", f:"50", g:"60", m:"88"},
-  {id:2, area:"吕梁市", b:"75", c:"12", d:"22", e:"33", f:"44", g:"55", m:"66"},
-];
-
+// 渲染登录页面
 function renderLogin(){
   document.getElementById('app').innerHTML = `
-  <div class="login-wrap">
-    <h2>月报填报系统登录</h2>
+  <div class="login-box">
+    <h2>技能人才月报填报系统</h2>
     <div class="form-item">
       <label>用户名</label>
-      <input id="username" placeholder="输入用户名">
+      <input id="username" placeholder="admin / 市本级 / 小店区">
     </div>
     <div class="form-item">
       <label>密码</label>
-      <input id="password" type="password" placeholder="输入密码">
+      <input id="pwd" type="password" value="yb2026">
     </div>
-    <button onclick="login()">登录</button>
+    <button onclick="login()">登录填报系统</button>
   </div>
   `;
 }
 window.login = async function(){
-  const uName = document.getElementById("username").value.trim();
-  const pwd = document.getElementById("password").value.trim();
-  const user = userList.find(x=>x.user===uName && x.pwd===pwd);
-  if(!user){
-    alert("用户名或密码错误");
-    return;
-  }
+  const uname = document.getElementById("username").value.trim();
+  const pwd = document.getElementById("pwd").value.trim();
+  const user = userList.find(x=>x.user===uname && x.pwd===pwd);
+  if(!user){alert("账号密码错误");return;}
   await renderTable(user);
 }
 
 async function renderTable(userInfo){
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/yuebao?order=id`,{
+    headers:{apikey:SUPABASE_ANON_KEY}
+  })
+  const rows = await res.json();
   document.getElementById('app').innerHTML = `
   <div class="container">
-    <h2>月报填报 - 当前登录：${userInfo.name}</h2>
+    <h3>技能人才月报填报 | 当前登录：${userInfo.name}</h3>
     <table>
       <thead>
         <tr>
-          <th>地区</th>
-          <th>B目标任务</th>
-          <th>C</th><th>D</th><th>E</th><th>F</th><th>G</th>
-          <th>M百行百业</th>
+          <th rowspan="3">县区</th>
+          <th colspan="12" class="big-header">开展补贴性职业技能培训人数</th>
+          <th colspan="5" class="green-header">新增技能人才人数</th>
+          <th colspan="5">新增取得高级工以上职业资格或职业技能等级证书的人数</th>
+        </tr>
+        <tr>
+          <th rowspan="2">目标任务</th>
+          <th colspan="5">就业重点群体培训</th>
+          <th rowspan="2">企业职工培训</th>
+          <th rowspan="2">创业培训</th>
+          <th rowspan="2">完成情况</th>
+          <th rowspan="2">完成百分比</th>
+          <th rowspan="2">公益免费培训</th>
+          <th rowspan="2">百行百业<br/>(只需要市本级填)</th>
+          <th rowspan="2">太原市培训数</th>
+
+          <th rowspan="2">目标任务</th>
+          <th colspan="3">完成情况</th>
+          <th rowspan="2">完成百分比</th>
+
+          <th rowspan="2">目标任务</th>
+          <th colspan="3">完成情况</th>
+          <th rowspan="2">完成百分比</th>
+        </tr>
+        <tr>
+          <th>高校毕业生</th>
+          <th>农村转移劳动力</th>
+          <th>城乡未继续升学初高中</th>
+          <th>失业人员</th>
+          <th>就业困难人员</th>
+          <th>省级</th><th>市级</th><th>总计</th>
+          <th>省级</th><th>市级</th><th>总计</th>
         </tr>
       </thead>
-      <tbody id="table-body">
-      </tbody>
+      <tbody id="tbody"></tbody>
     </table>
   </div>
-  `
-  const tbody = document.getElementById("table-body");
-  mockData.forEach(item=>{
-    const isReadOnlyB = userInfo.role === "county";
-    const isReadOnlyM = userInfo.role === "county";
+  `;
+  const tbody = document.getElementById("tbody");
+  if(!Array.isArray(rows)) return;
+  rows.forEach(item=>{
+    // 县区账号：百行百业列只读
+    const hundredIndustryReadonly = userInfo.role === "county";
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td>${item.area||''}</td>
-      <td><input class="table-input" value="${item.b||''}" ${isReadOnlyB ? 'readonly':''}></td>
-      <td><input class="table-input" value="${item.c||''}"></td>
-      <td><input class="table-input" value="${item.d||''}"></td>
-      <td><input class="table-input" value="${item.e||''}"></td>
-      <td><input class="table-input" value="${item.f||''}"></td>
-      <td><input class="table-input" value="${item.g||''}"></td>
-      <td><input class="table-input" value="${item.m||''}" ${isReadOnlyM ? 'readonly':''}></td>
+      <td>${item.county||''}</td>
+      <td><input class="cell" value="${item.train_target||''}" onchange="autoCalc(${item.id},'train_target',this.value)"></td>
+      <td><input class="cell" value="${item.col1_university||''}" onchange="save(${item.id},'col1_university',this.value)"></td>
+      <td><input class="cell" value="${item.col2_rural||''}" onchange="save(${item.id},'col2_rural',this.value)"></td>
+      <td><input class="cell" value="${item.col3_midschool||''}" onchange="save(${item.id},'col3_midschool',this.value)"></td>
+      <td><input class="cell" value="${item.col4_unemployed||''}" onchange="save(${item.id},'col4_unemployed',this.value)"></td>
+      <td><input class="cell" value="${item.col5_hardemp||''}" onchange="save(${item.id},'col5_hardemp',this.value)"></td>
+      <td><input class="cell" value="${item.train_enterprise||''}" onchange="save(${item.id},'train_enterprise',this.value)"></td>
+      <td><input class="cell" value="${item.train_startup||''}" onchange="save(${item.id},'train_startup',this.value)"></td>
+      <td><input class="cell" value="${item.train_complete||''}" onchange="autoCalc(${item.id},'train_complete',this.value)"></td>
+      <td><input class="cell" value="${item.train_percent||''}" readonly></td>
+      <td><input class="cell" value="${item.train_free_public||''}" onchange="save(${item.id},'train_free_public',this.value)"></td>
+      <td><input class="cell" value="${item.train_hundred_industry||''}" ${hundredIndustryReadonly?'readonly':''} onchange="save(${item.id},'train_hundred_industry',this.value)"></td>
+      <td><input class="cell" value="${item.train_taiyuan_sum||''}" onchange="save(${item.id},'train_taiyuan_sum',this.value)"></td>
+
+      <td><input class="cell" value="${item.talent_target||''}" onchange="autoCalc(${item.id},'talent_target',this.value)"></td>
+      <td><input class="cell" value="${item.talent_provincial||''}" onchange="autoCalc(${item.id},'talent_provincial',this.value)"></td>
+      <td><input class="cell" value="${item.talent_city||''}" onchange="autoCalc(${item.id},'talent_city',this.value)"></td>
+      <td><input class="cell" value="${item.talent_total||''}" readonly></td>
+      <td><input class="cell" value="${item.talent_percent||''}" readonly></td>
+
+      <td><input class="cell" value="${item.senior_target||''}" onchange="autoCalc(${item.id},'senior_target',this.value)"></td>
+      <td><input class="cell" value="${item.senior_provincial||''}" onchange="autoCalc(${item.id},'senior_provincial',this.value)"></td>
+      <td><input class="cell" value="${item.senior_city||''}" onchange="autoCalc(${item.id},'senior_city',this.value)"></td>
+      <td><input class="cell" value="${item.senior_total||''}" readonly></td>
+      <td><input class="cell" value="${item.senior_percent||''}" readonly></td>
     `;
     tbody.appendChild(tr);
+  })
+}
+
+// 自动计算：总计、百分比
+window.autoCalc = async function(id, field, value){
+  await save(id, field, value);
+  // 获取当前行全部数据
+  const resp = await fetch(`${SUPABASE_URL}/rest/v1/yuebao?id=eq.${id}`,{headers:{apikey:SUPABASE_ANON_KEY}});
+  const arr = await resp.json();
+  const row = arr[0];
+
+  // 新增技能人才总计 = 省级+市级
+  const p = Number(row.talent_provincial) || 0;
+  const c = Number(row.talent_city) || 0;
+  const talentTotal = p + c;
+  const talentTarget = Number(row.talent_target) || 0;
+  const talentPercent = talentTarget>0 ? (talentTotal / talentTarget *100).toFixed(2)+"%" : "0.00%";
+
+  // 高级工证书总计
+  const sp = Number(row.senior_provincial) ||0;
+  const sc = Number(row.senior_city) ||0;
+  const seniorTotal = sp + sc;
+  const seniorTarget = Number(row.senior_target) ||0;
+  const seniorPercent = seniorTarget>0 ? (seniorTotal / seniorTarget *100).toFixed(2)+"%" : "0.00%";
+
+  // 培训完成率
+  const trainComplete = Number(row.train_complete)||0;
+  const trainTarget = Number(row.train_target)||0;
+  const trainPercent = trainTarget>0 ? (trainComplete / trainTarget *100).toFixed(2)+"%" : "0.00%";
+
+  // 更新自动计算字段入库
+  await fetch(`${SUPABASE_URL}/rest/v1/yuebao?id=eq.${id}`,{
+    method:"PATCH",
+    headers:{apikey:SUPABASE_ANON_KEY,"Content-Type":"application/json"},
+    body:JSON.stringify({
+      talent_total:String(talentTotal),
+      talent_percent:talentPercent,
+      senior_total:String(seniorTotal),
+      senior_percent:seniorPercent,
+      train_percent:trainPercent
+    })
+  })
+  // 刷新页面渲染最新数据
+  const user = userList.find(u=>document.getElementById("username")?.value === u.user);
+  renderTable(user);
+}
+
+// 保存单元格数据到数据库
+window.save = async function(id, field, value){
+  await fetch(`${SUPABASE_URL}/rest/v1/yuebao?id=eq.${id}`,{
+    method:"PATCH",
+    headers:{apikey:SUPABASE_ANON_KEY,"Content-Type":"application/json"},
+    body:JSON.stringify({[field]:value})
   })
 }
 renderLogin();
