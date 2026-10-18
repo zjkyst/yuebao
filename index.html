@@ -32,8 +32,8 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 // =================================================================
 const userList = [
   {user:"admin",pwd:"yb2026",role:"admin",name:"管理员"},
-  {user:"市本级",pwd:"yb2026",role:"city",name:"市本级填报员"},
-  {user:"小店区",pwd:"yb2026",role:"county",name:"县区填报员"},
+  {user:"市本级",pwd:"yb2026",role:"city",name:"市本级填报员",filterCounty:"市本级"},
+  {user:"小店区",pwd:"yb2026",role:"county",name:"小店区填报员",filterCounty:"小店区"},
 ];
 
 // 登录入口函数
@@ -58,7 +58,13 @@ async function renderTable(userInfo){
       "Content-Type":"application/json"
     }
   });
-  const rows = await res.json();
+  let rows = await res.json();
+
+  // ========== 权限过滤：根据账号筛选县区行 ==========
+  if(userInfo.filterCounty){
+    rows = rows.filter(row=> row.county === userInfo.filterCounty)
+  }
+
   document.getElementById('app').innerHTML = `
   <div class="container">
     <h3>技能人才月报填报 | 当前登录：${userInfo.name}</h3>
@@ -110,14 +116,14 @@ async function renderTable(userInfo){
     tr.innerHTML = `
       <td>${item.county||''}</td>
       <td><input class="cell" value="${item.train_target||''}" onchange="autoCalc(${item.id},'train_target',this.value)"></td>
-      <td><input class="cell" value="${item.col1_university||''}" onchange="save(${item.id},'col1_university',this.value)"></td>
-      <td><input class="cell" value="${item.col2_rural||''}" onchange="save(${item.id},'col2_rural',this.value)"></td>
-      <td><input class="cell" value="${item.col3_midschool||''}" onchange="save(${item.id},'col3_midschool',this.value)"></td>
-      <td><input class="cell" value="${item.col4_unemployed||''}" onchange="save(${item.id},'col4_unemployed',this.value)"></td>
-      <td><input class="cell" value="${item.col5_hardemp||''}" onchange="save(${item.id},'col5_hardemp',this.value)"></td>
-      <td><input class="cell" value="${item.train_enterprise||''}" onchange="save(${item.id},'train_enterprise',this.value)"></td>
-      <td><input class="cell" value="${item.train_startup||''}" onchange="save(${item.id},'train_startup',this.value)"></td>
-      <td><input class="cell" value="${item.train_complete||''}" onchange="autoCalc(${item.id},'train_complete',this.value)"></td>
+      <td><input class="cell" value="${item.col1_university||''}" onchange="calcTrainComplete(${item.id})"></td>
+      <td><input class="cell" value="${item.col2_rural||''}" onchange="calcTrainComplete(${item.id})"></td>
+      <td><input class="cell" value="${item.col3_midschool||''}" onchange="calcTrainComplete(${item.id})"></td>
+      <td><input class="cell" value="${item.col4_unemployed||''}" onchange="calcTrainComplete(${item.id})"></td>
+      <td><input class="cell" value="${item.col5_hardemp||''}" onchange="calcTrainComplete(${item.id})"></td>
+      <td><input class="cell" value="${item.train_enterprise||''}" onchange="calcTrainComplete(${item.id})"></td>
+      <td><input class="cell" value="${item.train_startup||''}" onchange="calcTrainComplete(${item.id})"></td>
+      <td><input class="cell" value="${item.train_complete||''}" readonly></td>
       <td><input class="cell" value="${item.train_percent||''}" readonly></td>
       <td><input class="cell" value="${item.train_free_public||''}" onchange="save(${item.id},'train_free_public',this.value)"></td>
       <td><input class="cell" value="${item.train_hundred_industry||''}" ${hundredIndustryReadonly?'readonly':''} onchange="save(${item.id},'train_hundred_industry',this.value)"></td>
@@ -135,6 +141,33 @@ async function renderTable(userInfo){
     `;
     tbody.appendChild(tr);
   })
+}
+
+// ========= 新增：培训完成情况自动求和函数 =========
+window.calcTrainComplete = async function(id){
+  //读取当前行数据
+  const resp = await fetch(`${SUPABASE_URL}/rest/v1/yuebao?id=eq.${id}`,{headers:{apikey:SUPABASE_ANON_KEY}});
+  const arr = await resp.json();
+  const row = arr[0];
+  // 7项相加 = 完成情况
+  const sum = Number(row.col1_university||0)
+    + Number(row.col2_rural||0)
+    + Number(row.col3_midschool||0)
+    + Number(row.col4_unemployed||0)
+    + Number(row.col5_hardemp||0)
+    + Number(row.train_enterprise||0)
+    + Number(row.train_startup||0);
+  
+  // 更新完成情况入库，同时自动计算培训完成百分比
+  await fetch(`${SUPABASE_URL}/rest/v1/yuebao?id=eq.${id}`,{
+    method:"PATCH",
+    headers:{apikey:SUPABASE_ANON_KEY,"Content-Type":"application/json"},
+    body:JSON.stringify({
+      train_complete: String(sum)
+    })
+  })
+  // 计算培训完成百分比
+  await autoCalc(id,"train_complete",sum);
 }
 
 // 自动计算：总计、百分比
