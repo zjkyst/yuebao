@@ -30,31 +30,34 @@ input:read-only{background:#e9ecef;cursor:not-allowed;}
 const SUPABASE_URL = "https://nfdywdhegjghwimuedkr.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5mZHl3ZGhlZ2pnaHdpbXVlZGtyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIyNjc5NzYsImV4cCI6MjEwNzg0Mzk3Nn0.yRyypCTlxvLHo3VZ0sJYwe-KFzC6HrAkBRTiJmLTO98";
 // =================================================================
-
 const userList = [
   {user:"admin",pwd:"yb2026",role:"admin",name:"管理员"},
   {user:"市本级",pwd:"yb2026",role:"city",name:"市本级填报员"},
   {user:"小店区",pwd:"yb2026",role:"county",name:"县区填报员"},
 ];
 
-// 渲染登录页面
-function renderLogin(){
-  document.getElementById('app').innerHTML = `
-  <div class="login-box">
-    <h2>技能人才月报填报系统</h2>
-    <div class="form-item">
-      <label>用户名</label>
-      <input id="username" placeholder="admin / 市本级 / 小店区">
-    </div>
-    <div class="form-item">
-      <label>密码</label>
-      <input id="pwd" type="password" value="yb2026">
-    </div>
-    <button onclick="login()">登录填报系统</button>
-  </div>
-  `;
+// 登录入口函数
+window.login = async function(){
+  const usernameDom = document.getElementById("username");
+  const pwdDom = document.getElementById("pwd");
+  const username = usernameDom.value.trim();
+  const pwd = pwdDom.value.trim();
+  const user = userList.find(u=>u.user === username && u.pwd === pwd);
+  if(!user){
+    alert("用户名或密码错误！");
+    return;
+  }
+  await renderTable(user);
 }
 
+// 【核心：async 函数，里面允许写await】
+async function renderTable(userInfo){
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/yuebao?order=id`,{
+    headers:{
+      apikey:SUPABASE_ANON_KEY,
+      "Content-Type":"application/json"
+    }
+  });
   const rows = await res.json();
   document.getElementById('app').innerHTML = `
   <div class="container">
@@ -77,11 +80,9 @@ function renderLogin(){
           <th rowspan="2">公益免费培训</th>
           <th rowspan="2">百行百业<br/>(只需要市本级填)</th>
           <th rowspan="2">太原市培训数</th>
-
           <th rowspan="2">目标任务</th>
           <th colspan="3">完成情况</th>
           <th rowspan="2">完成百分比</th>
-
           <th rowspan="2">目标任务</th>
           <th colspan="3">完成情况</th>
           <th rowspan="2">完成百分比</th>
@@ -121,13 +122,11 @@ function renderLogin(){
       <td><input class="cell" value="${item.train_free_public||''}" onchange="save(${item.id},'train_free_public',this.value)"></td>
       <td><input class="cell" value="${item.train_hundred_industry||''}" ${hundredIndustryReadonly?'readonly':''} onchange="save(${item.id},'train_hundred_industry',this.value)"></td>
       <td><input class="cell" value="${item.train_taiyuan_sum||''}" onchange="save(${item.id},'train_taiyuan_sum',this.value)"></td>
-
       <td><input class="cell" value="${item.talent_target||''}" onchange="autoCalc(${item.id},'talent_target',this.value)"></td>
       <td><input class="cell" value="${item.talent_provincial||''}" onchange="autoCalc(${item.id},'talent_provincial',this.value)"></td>
       <td><input class="cell" value="${item.talent_city||''}" onchange="autoCalc(${item.id},'talent_city',this.value)"></td>
       <td><input class="cell" value="${item.talent_total||''}" readonly></td>
       <td><input class="cell" value="${item.talent_percent||''}" readonly></td>
-
       <td><input class="cell" value="${item.senior_target||''}" onchange="autoCalc(${item.id},'senior_target',this.value)"></td>
       <td><input class="cell" value="${item.senior_provincial||''}" onchange="autoCalc(${item.id},'senior_provincial',this.value)"></td>
       <td><input class="cell" value="${item.senior_city||''}" onchange="autoCalc(${item.id},'senior_city',this.value)"></td>
@@ -145,26 +144,22 @@ window.autoCalc = async function(id, field, value){
   const resp = await fetch(`${SUPABASE_URL}/rest/v1/yuebao?id=eq.${id}`,{headers:{apikey:SUPABASE_ANON_KEY}});
   const arr = await resp.json();
   const row = arr[0];
-
   // 新增技能人才总计 = 省级+市级
   const p = Number(row.talent_provincial) || 0;
   const c = Number(row.talent_city) || 0;
   const talentTotal = p + c;
   const talentTarget = Number(row.talent_target) || 0;
   const talentPercent = talentTarget>0 ? (talentTotal / talentTarget *100).toFixed(2)+"%" : "0.00%";
-
   // 高级工证书总计
   const sp = Number(row.senior_provincial) ||0;
   const sc = Number(row.senior_city) ||0;
   const seniorTotal = sp + sc;
   const seniorTarget = Number(row.senior_target) ||0;
   const seniorPercent = seniorTarget>0 ? (seniorTotal / seniorTarget *100).toFixed(2)+"%" : "0.00%";
-
   // 培训完成率
   const trainComplete = Number(row.train_complete)||0;
   const trainTarget = Number(row.train_target)||0;
   const trainPercent = trainTarget>0 ? (trainComplete / trainTarget *100).toFixed(2)+"%" : "0.00%";
-
   // 更新自动计算字段入库
   await fetch(`${SUPABASE_URL}/rest/v1/yuebao?id=eq.${id}`,{
     method:"PATCH",
@@ -179,7 +174,7 @@ window.autoCalc = async function(id, field, value){
   })
   // 刷新页面渲染最新数据
   const user = userList.find(u=>document.getElementById("username")?.value === u.user);
-  renderTable(user);
+  await renderTable(user);
 }
 
 // 保存单元格数据到数据库
@@ -190,6 +185,26 @@ window.save = async function(id, field, value){
     body:JSON.stringify({[field]:value})
   })
 }
+
+// 渲染登录页面
+function renderLogin(){
+  document.getElementById('app').innerHTML = `
+  <div class="login-box">
+    <h2>技能人才月报填报系统</h2>
+    <div class="form-item">
+      <label>用户名</label>
+      <input id="username" placeholder="admin / 市本级 / 小店区">
+    </div>
+    <div class="form-item">
+      <label>密码</label>
+      <input id="pwd" type="password" value="yb2026">
+    </div>
+    <button onclick="login()">登录填报系统</button>
+  </div>
+  `;
+}
+
+// 页面初始化加载登录界面
 renderLogin();
 </script>
 </body>
