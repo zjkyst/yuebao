@@ -24,35 +24,17 @@ input.table-input{width:100%;border:0;padding:4px 6px}
 <div id="app"></div>
 
 <script>
-// ========= 在这里填入你的Supabase信息 =========
-const SUPABASE_URL = "https://nfdywdhegjghwimuedkr.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5mZHl3ZGhlZ2pnaHdpbXVlZGtyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIyNjc5NzYsImV4cCI6MjEwNzg0Mzk3Nn0.yRyypCTlxvLHo3VZ0sJYwe-KFzC6HrAkBRTiJmLTO98";
-// =============================================
-
-// 内嵌简易supabase客户端，不再依赖CDN
-const supabase = {
-  url: SUPABASE_URL,
-  key: SUPABASE_ANON_KEY,
-  from(tableName){
-    return {
-      async select(){
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/${tableName}?order=id`,{
-          headers:{apikey:SUPABASE_ANON_KEY,"Content-Type":"application/json"}
-        })
-        const data = await res.json();
-        return {data, error:null};
-      },
-      async update(obj){
-        return {data:obj,error:null};
-      }
-    }
-  }
-}
-
+// ========= 模拟数据版本，不访问数据库，前端页面调试 =========
 const userList = [
   {user:"admin",pwd:"yb2026",role:"admin",name:"管理员"},
   {user:"市本级",pwd:"yb2026",role:"city",name:"市本级管理员"},
   {user:"小店区",pwd:"yb2026",role:"county",name:"小店区填报员"},
+];
+
+// 模拟测试数据
+const mockData = [
+  {id:1, area:"太原市", b:"100", c:"20", d:"30", e:"40", f:"50", g:"60", m:"88"},
+  {id:2, area:"吕梁市", b:"75", c:"12", d:"22", e:"33", f:"44", g:"55", m:"66"},
 ];
 
 function renderLogin(){
@@ -83,9 +65,6 @@ window.login = async function(){
 }
 
 async function renderTable(userInfo){
-  let {data,error} = await supabase.from("yuebao").select();
-  if(error) console.log(error);
-  let rows = data || [];
   document.getElementById('app').innerHTML = `
   <div class="container">
     <h2>月报填报 - 当前登录：${userInfo.name}</h2>
@@ -104,28 +83,21 @@ async function renderTable(userInfo){
   </div>
   `
   const tbody = document.getElementById("table-body");
-  rows.forEach(item=>{
+  mockData.forEach(item=>{
     const isReadOnlyB = userInfo.role === "county";
     const isReadOnlyM = userInfo.role === "county";
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td>${item.area}</td>
-      <td><input class="table-input" value="${item.b||''}" ${isReadOnlyB ? 'readonly':''} onchange="saveRow(${item.id},'b',this.value)"></td>
-      <td><input class="table-input" value="${item.c||''}" onchange="saveRow(${item.id},'c',this.value)"></td>
-      <td><input class="table-input" value="${item.d||''}" onchange="saveRow(${item.id},'d',this.value)"></td>
-      <td><input class="table-input" value="${item.e||''}" onchange="saveRow(${item.id},'e',this.value)"></td>
-      <td><input class="table-input" value="${item.f||''}" onchange="saveRow(${item.id},'f',this.value)"></td>
-      <td><input class="table-input" value="${item.g||''}" onchange="saveRow(${item.id},'g',this.value)"></td>
-      <td><input class="table-input" value="${item.m||''}" ${isReadOnlyM ? 'readonly':''} onchange="saveRow(${item.id},'m',this.value)"></td>
+      <td>${item.area||''}</td>
+      <td><input class="table-input" value="${item.b||''}" ${isReadOnlyB ? 'readonly':''}></td>
+      <td><input class="table-input" value="${item.c||''}"></td>
+      <td><input class="table-input" value="${item.d||''}"></td>
+      <td><input class="table-input" value="${item.e||''}"></td>
+      <td><input class="table-input" value="${item.f||''}"></td>
+      <td><input class="table-input" value="${item.g||''}"></td>
+      <td><input class="table-input" value="${item.m||''}" ${isReadOnlyM ? 'readonly':''}></td>
     `;
     tbody.appendChild(tr);
-  })
-}
-window.saveRow = async function(id,col,val){
-  await fetch(`${SUPABASE_URL}/rest/v1/yuebao?id=eq.${id}`,{
-    method:"PATCH",
-    headers:{apikey:SUPABASE_ANON_KEY,"Content-Type":"application/json"},
-    body:JSON.stringify({[col]:val})
   })
 }
 renderLogin();
