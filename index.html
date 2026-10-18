@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>月报填报系统</title>
+</head>
+<body>
+    <h2>月报填报</h2>
+    <div>
+        <label>填报人：</label>
+        <input type="text" id="name" placeholder="请输入姓名"><br><br>
+        <label>填报月份：</label>
+        <input type="month" id="month"><br><br>
+        <label>工作内容：</label>
+        <textarea id="content" rows="5" cols="40"></textarea><br><br>
+        <button onclick="submitData()">提交保存</button>
+    </div>
+
+    <script src="./supabase.min.js"></script>
+    <script>
+        // =========这里替换成你的 Supabase 信息========
+        const SUPABASE_URL = "https://nfdywdhegjghwimuedkr.supabase.co";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5mZHl3ZGhlZ2pnaHdpbXVlZGtyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIyNjc5NzYsImV4cCI6MjEwNzg0Mzk3Nn0.yRyypCTlxvLHo3VZ0sJYwe-KFzC6HrAkBRTiJmLTO98";
+        // ============================================
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        async function submitData() {
+            const name = document.getElementById("name").value;
+            const month = document.getElementById("month").value;
+            const content = document.getElementById("content").value;
+            if(!name || !month || !content){
+                alert("请填写完整表单！");
+                return;
+            }
+            const {data, error} = await supabase
+                .from("yuebao_report")
+                .insert([
+                    {
+                        username: name,
+                        report_month: month,
+                        content: content
+                    }
+                ])
+            if(error){
+                console.error(error);
+                alert("提交失败："+error.message);
+            }else{
+                alert("提交成功！");
+            }
+        }
+    </script>
+</body>
+</html>
